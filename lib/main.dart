@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/auth/login_screen.dart';
-import 'screens/auth/register_screen.dart'; // <-- Agrega esta línea
+import 'screens/auth/register_screen.dart';
+import 'screens/report_incident_screen.dart'; // <-- Agrega esta línea
 
 void main() {
   runApp(const MyApp());
@@ -20,6 +21,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/report': (context) => const ReportIncidentScreen(), // <-- Agrega esta línea
       },
     );
   }
