@@ -33,10 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Welcome Text
               Text(
                 'Welcome Back 👋',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               Row(
                 children: [
@@ -120,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   onPressed: () {
-                    Navigator.pushNamed(context, '/report');
+                    Navigator.pushNamed(context, '/dashboard');
                   },
                   child: Text(
                     'Login',
