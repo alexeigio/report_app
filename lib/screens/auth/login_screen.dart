@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'register_screen.dart'; // <-- Agrega esta línea
 
 class LoginScreen extends StatefulWidget {
@@ -10,6 +12,45 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _login() async {
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      // Usuario logueado, navega a la siguiente pantalla
+      Navigator.pushNamed(context, '/report');
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Error al iniciar sesión')),
+      );
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        // El usuario canceló el inicio de sesión
+        return;
+      }
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      // Usuario logueado, navega a la siguiente pantalla
+      Navigator.pushNamed(context, '/report');
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Error al iniciar sesión con Google')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 32),
               // Email Field
               TextField(
+                controller: _emailController,
                 decoration: InputDecoration(
                   labelText: 'Email Address',
                   border: OutlineInputBorder(
@@ -74,6 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               // Password Field
               TextField(
+                controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'Password',
@@ -119,9 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/report');
-                  },
+                  onPressed: _login,
                   child: Text(
                     'Login',
                     style: TextStyle(fontSize: 18, color: Colors.white),
@@ -157,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Google',
                     style: TextStyle(fontSize: 16, color: Colors.black),
                   ),
-                  onPressed: () {},
+                  onPressed: _signInWithGoogle,
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.grey.shade300),
                     shape: RoundedRectangleBorder(

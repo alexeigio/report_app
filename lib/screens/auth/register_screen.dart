@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -10,6 +11,31 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Agrega controladores para los campos
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _register() async {
+    try {
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      // Envía el correo de verificación
+      await userCredential.user?.sendEmailVerification();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Usuario registrado. Revisa tu correo para verificar la cuenta.')),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Error al registrar')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               // Email
               TextField(
+                controller: _emailController,
                 decoration: InputDecoration(
                   labelText: 'Email Address',
                   hintText: 'Enter Email Address',
@@ -96,6 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               // Password
               TextField(
+                controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'Password',
@@ -153,7 +181,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: _register,
                   child: Text(
                     'Register',
                     style: TextStyle(fontSize: 18, color: Colors.black54),
