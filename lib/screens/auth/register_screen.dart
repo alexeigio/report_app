@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -18,24 +19,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
 
   Future<void> _register() async {
     try {
       if (_passwordController.text != _confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passwords do not match')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
         return;
       }
 
-      UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
       await userCredential.user?.sendEmailVerification();
 
       String fullName =
@@ -55,7 +57,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Usuario registrado. Revisa tu correo para verificar la cuenta.'),
+          content: Text(
+            'Usuario registrado. Revisa tu correo para verificar la cuenta.',
+          ),
           duration: Duration(seconds: 2),
         ),
       );
@@ -63,7 +67,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Espera un momento y regresa al login
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) Navigator.pop(context);
-
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Error al registrar')),
@@ -76,12 +79,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return;
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      UserCredential userCredential = await _auth.signInWithCredential(credential);
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
       final user = userCredential.user;
 
       // Extraer nombre y apellido del displayName de Google
@@ -108,7 +114,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SnackBar(content: Text('Registrado con Google correctamente.')),
       );
       if (mounted) Navigator.pop(context);
-
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Error al registrar con Google')),
@@ -126,7 +131,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }) async {
     try {
       print('Intentando guardar usuario en Firestore: ${user.uid}');
-      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
       final userDoc = await userRef.get();
       if (!userDoc.exists) {
         await userRef.set({
@@ -135,7 +142,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'firstName': firstName ?? '',
           'lastName': lastName ?? '',
           'provider': provider,
-          'photoUrl': photoUrl ?? user.photoURL ??
+          'photoUrl':
+              photoUrl ??
+              user.photoURL ??
               "https://st3.depositphotos.com/15648834/17930/v/450/depositphotos_179308454-stock-illustration-unknown-person-silhouette-glasses-profile.jpg",
           'createdAt': FieldValue.serverTimestamp(),
         });
@@ -161,19 +170,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 16, bottom: 32),
-                  child: Image.asset(
-                    'assets/logo.png',
-                    height: 80,
-                  ),
+                  child: Image.asset('assets/logo.png', height: 80),
                 ),
               ),
               // Title
               Text(
                 'Register Account',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               Row(
                 children: [
@@ -182,7 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'HR Attendee',
+                    'Report App',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -318,28 +321,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Google Button (aún sin implementar)
+
               SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: OutlinedButton.icon(
-                  icon: Image.asset(
-                    'assets/google_icon.png',
-                    height: 24,
-                  ),
-                  label: Text(
-                    'Google',
-                    style: TextStyle(fontSize: 16, color: Colors.black),
-                  ),
-                  onPressed: _registerWithGoogle,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                child: InkWell(
+                  onTap: _registerWithGoogle,
+                  child: SvgPicture.asset(
+                    'assets/google_logo_SU.svg', // El botón oficial completo en SVG
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
+
               const SizedBox(height: 32),
               // Login link
               Row(
