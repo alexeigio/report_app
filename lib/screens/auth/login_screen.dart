@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'register_screen.dart'; 
+import 'register_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,8 +22,8 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      
-      Navigator.pushNamed(context, '/dashboard'); 
+
+      Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Error al iniciar sesión')),
@@ -38,35 +38,49 @@ class _LoginScreenState extends State<LoginScreen> {
         // El usuario canceló el inicio de sesión
         return;
       }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
       // Guardar usuario en Firestore
       await saveUserToFirestore(userCredential.user!, provider: "google");
       // Usuario logueado, navega a la siguiente pantalla
-      Navigator.pushNamed(context, '/report');
+      Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Error al iniciar sesión con Google')),
+        SnackBar(
+          content: Text(e.message ?? 'Error al iniciar sesión con Google'),
+        ),
       );
     }
   }
 
-  Future<void> saveUserToFirestore(User user, {required String provider}) async {
+  Future<void> saveUserToFirestore(
+    User user, {
+    required String provider,
+  }) async {
     try {
-      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      print("Intentando guardar usuario con UID: ${user.uid}");
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
       final userDoc = await userRef.get();
       if (!userDoc.exists) {
-        // Si el usuario no existe, lo creamos
         await userRef.set({
           'uid': user.uid,
           'email': user.email,
+          'displayName': user.displayName,
+          'photoURL': user.photoURL,
           'provider': provider,
           'createdAt': FieldValue.serverTimestamp(),
         });
+        print("Usuario guardado correctamente.");
+      } else {
+        print("Usuario ya existía en Firestore.");
       }
     } catch (e) {
       print('Error al guardar usuario en Firestore: $e');

@@ -52,6 +52,6 @@ dependencies {
 
     // Agrega los productos de Firebase que usarás
     implementation("com.google.firebase:firebase-analytics")
-    // implementation("com.google.firebase:firebase-auth") // Ejemplo para Auth
-    // implementation("com.google.firebase:firebase-firestore") // Ejemplo para Firestore
+    implementation("com.google.firebase:firebase-auth") // Ejemplo para Auth
+    implementation("com.google.firebase:firebase-firestore") // Ejemplo para Firestore
 }
