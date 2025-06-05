@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'register_screen.dart'; // <-- Agrega esta línea
+import 'register_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -21,8 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      
-      Navigator.pushNamed(context, '/dashboard'); 
+
+      Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Error al iniciar sesión')),
@@ -37,18 +39,52 @@ class _LoginScreenState extends State<LoginScreen> {
         // El usuario canceló el inicio de sesión
         return;
       }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
+      // Guardar usuario en Firestore
+      await saveUserToFirestore(userCredential.user!, provider: "google");
       // Usuario logueado, navega a la siguiente pantalla
-      Navigator.pushNamed(context, '/report');
+      Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Error al iniciar sesión con Google')),
+        SnackBar(
+          content: Text(e.message ?? 'Error al iniciar sesión con Google'),
+        ),
       );
+    }
+  }
+
+  Future<void> saveUserToFirestore(
+    User user, {
+    required String provider,
+  }) async {
+    try {
+      print("Intentando guardar usuario con UID: ${user.uid}");
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
+      final userDoc = await userRef.get();
+      if (!userDoc.exists) {
+        await userRef.set({
+          'uid': user.uid,
+          'email': user.email,
+          'displayName': user.displayName,
+          'photoURL': user.photoURL,
+          'provider': provider,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        print("Usuario guardado correctamente.");
+      } else {
+        print("Usuario ya existía en Firestore.");
+      }
+    } catch (e) {
+      print('Error al guardar usuario en Firestore: $e');
     }
   }
 
@@ -83,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'HR Attendee',
+                    'Report App',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -182,29 +218,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Google Button
+
               SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: OutlinedButton.icon(
-                  icon: Image.asset(
-                    'assets/google_icon.png', // Cambia por la ruta de tu icono de Google
-                    height: 24,
-                  ),
-                  label: Text(
-                    'Google',
-                    style: TextStyle(fontSize: 16, color: Colors.black),
-                  ),
-                  onPressed: _signInWithGoogle,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                child: InkWell(
+                  onTap: _signInWithGoogle,
+                  child: SvgPicture.asset(
+                    'assets/google_logo_ctn.svg', // El botón oficial completo en SVG
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
+
               const SizedBox(height: 32),
+
               // Register
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

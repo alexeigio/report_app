@@ -32,5 +32,5 @@ tasks.register<Delete>("clean") {
 
 plugins {
     kotlin("android") version "2.1.10" apply false
-    // ...otros plugins...
+    id("com.google.gms.google-services") version "4.4.2" apply false
 }

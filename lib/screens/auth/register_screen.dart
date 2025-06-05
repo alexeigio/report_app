@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -14,26 +17,143 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Agrega controladores para los campos
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
 
   Future<void> _register() async {
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      // Envía el correo de verificación
+      if (_passwordController.text != _confirmPasswordController.text) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
+        return;
+      }
+
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
       await userCredential.user?.sendEmailVerification();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Usuario registrado. Revisa tu correo para verificar la cuenta.')),
+      String fullName =
+          '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}';
+      await userCredential.user!.updateDisplayName(fullName);
+      await userCredential.user!.reload();
+      final updatedUser = _auth.currentUser;
+
+      // AGREGA ESTA LÍNEA para guardar en Firestore:
+      await saveUserToFirestore(
+        updatedUser!,
+        provider: "email",
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        photoUrl: null,
       );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Usuario registrado. Revisa tu correo para verificar la cuenta.',
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Espera un momento y regresa al login
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Error al registrar')),
       );
+    }
+  }
+
+  Future<void> _registerWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+      final user = userCredential.user;
+
+      // Extraer nombre y apellido del displayName de Google
+      String? displayName = user?.displayName ?? '';
+      String firstName = '';
+      String lastName = '';
+      if (displayName.contains(' ')) {
+        firstName = displayName.split(' ').first;
+        lastName = displayName.split(' ').skip(1).join(' ');
+      } else {
+        firstName = displayName;
+        lastName = '';
+      }
+
+      await saveUserToFirestore(
+        user!,
+        provider: "google",
+        firstName: firstName,
+        lastName: lastName,
+        photoUrl: user.photoURL,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registrado con Google correctamente.')),
+      );
+      if (mounted) Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Error al registrar con Google')),
+      );
+    }
+  }
+
+  // Modifica saveUserToFirestore para aceptar más campos:
+  Future<void> saveUserToFirestore(
+    User user, {
+    required String provider,
+    String? firstName,
+    String? lastName,
+    String? photoUrl,
+  }) async {
+    try {
+      print('Intentando guardar usuario en Firestore: ${user.uid}');
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
+      final userDoc = await userRef.get();
+      if (!userDoc.exists) {
+        await userRef.set({
+          'uid': user.uid,
+          'email': user.email,
+          'firstName': firstName ?? '',
+          'lastName': lastName ?? '',
+          'provider': provider,
+          'photoUrl':
+              photoUrl ??
+              user.photoURL ??
+              "https://st3.depositphotos.com/15648834/17930/v/450/depositphotos_179308454-stock-illustration-unknown-person-silhouette-glasses-profile.jpg",
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        print('Usuario guardado en Firestore');
+      } else {
+        print('El usuario ya existe en Firestore');
+      }
+    } catch (e) {
+      print('Error al guardar usuario en Firestore: $e');
     }
   }
 
@@ -50,19 +170,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 16, bottom: 32),
-                  child: Image.asset(
-                    'assets/logo.png', // Cambia por la ruta de tu logo
-                    height: 80,
-                  ),
+                  child: Image.asset('assets/logo.png', height: 80),
                 ),
               ),
               // Title
               Text(
                 'Register Account',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               Row(
                 children: [
@@ -71,7 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'HR Attendee',
+                    'Report App',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -88,6 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 32),
               // First Name
               TextField(
+                controller: _firstNameController,
                 decoration: InputDecoration(
                   labelText: 'First Name',
                   hintText: 'Enter First Name',
@@ -99,6 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               // Last Name
               TextField(
+                controller: _lastNameController,
                 decoration: InputDecoration(
                   labelText: 'Last Name',
                   hintText: 'Enter Last Name',
@@ -148,6 +264,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               // Confirm Password
               TextField(
+                controller: _confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
                 decoration: InputDecoration(
                   labelText: 'Confirm Password',
@@ -204,28 +321,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Google Button
+
               SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: OutlinedButton.icon(
-                  icon: Image.asset(
-                    'assets/google_icon.png', // Cambia por la ruta de tu icono de Google
-                    height: 24,
-                  ),
-                  label: Text(
-                    'Google',
-                    style: TextStyle(fontSize: 16, color: Colors.black),
-                  ),
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                child: InkWell(
+                  onTap: _registerWithGoogle,
+                  child: SvgPicture.asset(
+                    'assets/google_logo_SU.svg', // El botón oficial completo en SVG
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
+
               const SizedBox(height: 32),
               // Login link
               Row(
