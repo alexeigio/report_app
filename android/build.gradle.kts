@@ -31,6 +31,6 @@ tasks.register<Delete>("clean") {
 }
 
 plugins {
-    kotlin("android") version "2.0.0" apply false
+    kotlin("android") version "2.1.10" apply false
     // ...otros plugins...
 }

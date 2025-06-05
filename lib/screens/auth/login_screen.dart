@@ -21,8 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // Usuario logueado, navega a la siguiente pantalla
-      Navigator.pushNamed(context, '/report');
+      
+      Navigator.pushNamed(context, '/dashboard'); 
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Error al iniciar sesión')),
@@ -159,9 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/dashboard');
-                  },
+                  onPressed: _login,
                   child: Text(
                     'Login',
                     style: TextStyle(fontSize: 18, color: Colors.white),
