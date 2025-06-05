@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'register_screen.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -42,13 +43,33 @@ class _LoginScreenState extends State<LoginScreen> {
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      // Guardar usuario en Firestore
+      await saveUserToFirestore(userCredential.user!, provider: "google");
       // Usuario logueado, navega a la siguiente pantalla
       Navigator.pushNamed(context, '/report');
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Error al iniciar sesión con Google')),
       );
+    }
+  }
+
+  Future<void> saveUserToFirestore(User user, {required String provider}) async {
+    try {
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userDoc = await userRef.get();
+      if (!userDoc.exists) {
+        // Si el usuario no existe, lo creamos
+        await userRef.set({
+          'uid': user.uid,
+          'email': user.email,
+          'provider': provider,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      print('Error al guardar usuario en Firestore: $e');
     }
   }
 
