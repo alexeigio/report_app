@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'register_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -19,10 +20,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      User? user = userCredential.user;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Debes verificar tu correo electrónico. Se ha reenviado el correo de verificación.'),
+            action: SnackBarAction(
+              label: 'Reenviar',
+              onPressed: () async {
+                await user.sendEmailVerification();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Correo de verificación reenviado.')),
+                );
+              },
+            ),
+          ),
+        );
+        await FirebaseAuth.instance.signOut();
+        return;
+      }
 
       Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
@@ -176,7 +198,14 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ForgotPasswordScreen(),
+                      ),
+                    );
+                  },
                   child: Text(
                     'Forgot Password ?',
                     style: TextStyle(color: Colors.blue),
