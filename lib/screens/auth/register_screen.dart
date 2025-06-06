@@ -242,7 +242,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ? null
                       : () => _registerWithGoogle(context),
                   child: SvgPicture.asset(
-                    'assets/google_logo_SU.svg',
+                    'assets/google_logo_SU.svg', 
                     fit: BoxFit.contain,
                   ),
                 ),

@@ -80,14 +80,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         page.imageAsset,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        gaplessPlayback: true, // ✅ evita parpadeo
+                        gaplessPlayback: true,
                       ),
                     ),
                     const Spacer(flex: 7),
                   ],
                 ),
               ),
-              // Contenedor blanco encima parcialmente de la imagen
               Align(
                 alignment: Alignment.bottomCenter,
                 child: ClipRRect(
@@ -170,6 +169,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 _currentIndex == _pages.length - 1
                                     ? "Get Started"
                                     : "Next",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
