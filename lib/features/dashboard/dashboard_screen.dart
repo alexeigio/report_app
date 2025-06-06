@@ -32,50 +32,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
   }
 
-  List<PersistentBottomNavBarItem> _navBarsItems() {
+  List<PersistentBottomNavBarItem> _navBarsItems(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
       PersistentBottomNavBarItem(
         icon: const Icon(Icons.home),
         title: ("Home"),
-        activeColorPrimary: Colors.indigo,
-        inactiveColorPrimary: Colors.grey,
+        activeColorPrimary: isDark ? Colors.white : Colors.indigo,
+        inactiveColorPrimary: isDark ? Colors.grey[400]! : Colors.grey,
       ),
       PersistentBottomNavBarItem(
         icon: const Icon(Icons.list_alt),
         title: ("All Reports"),
-        activeColorPrimary: Colors.indigo,
-        inactiveColorPrimary: Colors.grey,
+        activeColorPrimary: isDark ? Colors.white : Colors.indigo,
+        inactiveColorPrimary: isDark ? Colors.grey[400]! : Colors.grey,
       ),
       PersistentBottomNavBarItem(
         icon: const Icon(Icons.add_circle),
         title: ("Report"),
-        activeColorPrimary: Colors.indigo,
-        inactiveColorPrimary: Colors.grey,
+        activeColorPrimary: isDark ? Colors.white : Colors.indigo,
+        inactiveColorPrimary: isDark ? Colors.grey[400]! : Colors.grey,
       ),
       PersistentBottomNavBarItem(
         icon: const Icon(Icons.report),
         title: ("My Reports"),
-        activeColorPrimary: Colors.indigo,
-        inactiveColorPrimary: Colors.grey,
+        activeColorPrimary: isDark ? Colors.white : Colors.indigo,
+        inactiveColorPrimary: isDark ? Colors.grey[400]! : Colors.grey,
       ),
       PersistentBottomNavBarItem(
         icon: const Icon(Icons.person),
         title: ("Profile"),
-        activeColorPrimary: Colors.indigo,
-        inactiveColorPrimary: Colors.grey,
+        activeColorPrimary: isDark ? Colors.white : Colors.indigo,
+        inactiveColorPrimary: isDark ? Colors.grey[400]! : Colors.grey,
       ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return PersistentTabView(
       context,
       controller: _controller,
       screens: _buildScreens(),
-      items: _navBarsItems(),
+      items: _navBarsItems(context),
       navBarStyle: NavBarStyle.style9,
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? Colors.grey[900]! : Colors.white,
       confineToSafeArea: true,
       handleAndroidBackButtonPress: true,
       resizeToAvoidBottomInset: true,
@@ -83,7 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       hideNavigationBarWhenKeyboardAppears: true,
       decoration: NavBarDecoration(
         borderRadius: BorderRadius.circular(15.0),
-        colorBehindNavBar: Colors.white,
+        colorBehindNavBar: isDark ? Colors.black : Colors.white,
       ),
       popBehaviorOnSelectedNavBarItemPress: PopBehavior.all,
     );
