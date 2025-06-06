@@ -72,7 +72,7 @@ class RegisterProvider extends ChangeNotifier {
       await credential.user?.sendEmailVerification();
       setSuccess('Registro exitoso. Revisa tu correo para verificar tu cuenta.');
       setLoading(false);
-      await FirebaseAuth.instance.signOut(); // Importante: cerrar sesión tras registro
+      await FirebaseAuth.instance.signOut();
       return credential.user;
     } on FirebaseAuthException catch (e) {
       setError(e.message ?? 'Registration error');

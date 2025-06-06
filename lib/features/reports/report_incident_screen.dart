@@ -1,240 +1,323 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:dropdown_textfield/dropdown_textfield.dart';
+import 'package:report_app/providers/report_provider.dart';
 
 class ReportIncidentScreen extends StatefulWidget {
-  const ReportIncidentScreen({Key? key}) : super(key: key);
+  final void Function(int)? onReportSubmitted;
+
+  const ReportIncidentScreen({super.key, this.onReportSubmitted});
 
   @override
   State<ReportIncidentScreen> createState() => _ReportIncidentScreenState();
 }
 
 class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _typeController = TextEditingController();
-  final TextEditingController _contactController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  final PageController _controller = PageController();
+  int _currentPage = 0;
+  bool _isLoading = false;
 
-  DateTime? _selectedDate;
-  String? _selectedType;
-
-  final List<String> _incidentTypes = [
-    'Accident',
-    'Theft',
-    'Harassment',
-    'Other',
+  final List<DropDownValueModel> _categories = const [
+    DropDownValueModel(name: 'Potholes', value: 'Potholes'),
+    DropDownValueModel(name: 'Street Lighting', value: 'Street Lighting'),
+    DropDownValueModel(name: 'Garbage', value: 'Garbage'),
+    DropDownValueModel(name: 'Public Safety', value: 'Public Safety'),
+    DropDownValueModel(name: 'Noise', value: 'Noise'),
+    DropDownValueModel(name: 'Vandalism', value: 'Vandalism'),
+    DropDownValueModel(name: 'Loose Animals', value: 'Loose Animals'),
+    DropDownValueModel(name: 'Road Obstruction', value: 'Road Obstruction'),
+    DropDownValueModel(name: 'Other', value: 'Other'),
   ];
 
-  Future<void> _pickDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-        _dateController.text =
-            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+  final _titleController = TextEditingController();
+  final _addressController = TextEditingController();
+  String? _selectedCategory;
+
+  void _nextPage() async {
+    final provider = Provider.of<ReportProvider>(context, listen: false);
+
+    if (_currentPage == 0) {
+      if (_titleController.text.trim().isEmpty || _selectedCategory == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Please enter a title and select a category."),
+          ),
+        );
+        return;
+      }
+      provider.setTitle(_titleController.text.trim());
+      provider.setCategory(_selectedCategory);
+    } else if (_currentPage == 1) {
+      if (_addressController.text.trim().isEmpty ||
+          provider.selectedLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Please enter an address and select a location on the map.",
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    if (_currentPage < 2) {
+      _controller.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      setState(() => _currentPage++);
+    } else {
+      setState(() => _isLoading = true);
+      await provider.submitReport(context, () async {
+        setState(() => _isLoading = false);
+        await showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text("Report Submitted"),
+                content: const Text(
+                  "Your report has been successfully registered.",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text("OK"),
+                  ),
+                ],
+              ),
+        );
+        provider.reset();
+        _titleController.clear();
+        _addressController.clear();
+        setState(() {
+          _currentPage = 0;
+          _controller.jumpToPage(0);
+          _selectedCategory = null;
+        });
+        if (widget.onReportSubmitted != null) {
+          widget.onReportSubmitted!(3);
+        }
       });
     }
   }
 
-  void _showSuccessDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.blue[100],
-              child: Icon(Icons.check, color: Colors.blue, size: 48),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Report Submitted\nSuccessfully',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Your report has been submitted successfully',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black54),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Done',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+  InputDecoration _inputStyle(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<ReportProvider>(context);
+
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
+        children: [
+          Column(
             children: [
-              // AppBar style
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Spacer(),
-                  const Text(
-                    'Report Incident',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/new_report_header.png',
+                      height: 60,
                     ),
                   ),
-                  const Spacer(flex: 2),
-                ],
-              ),
-              const SizedBox(height: 24),
-              // Title
-              TextField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Title',
-                  hintText: 'Incident Title',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  labelStyle: const TextStyle(color: Colors.blue),
                 ),
               ),
-              const SizedBox(height: 16),
-              // Incident Type Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedType,
-                items: _incidentTypes
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type),
-                        ))
-                    .toList(),
-                decoration: InputDecoration(
-                  labelText: 'Incident Type',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  labelStyle: const TextStyle(color: Colors.blue),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedType = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              // Contact Number
-              TextField(
-                controller: _contactController,
-                decoration: InputDecoration(
-                  labelText: 'Contact Number',
-                  hintText: '(000) 000-0000',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  labelStyle: const TextStyle(color: Colors.blue),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
-              // Date
-              TextField(
-                controller: _dateController,
-                readOnly: true,
-                decoration: InputDecoration(
-                  labelText: 'Date',
-                  hintText: 'Select Date',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  labelStyle: const TextStyle(color: Colors.blue),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.calendar_today_outlined),
-                    onPressed: () => _pickDate(context),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Description
-              TextField(
-                controller: _descriptionController,
-                minLines: 3,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  labelText: 'Description',
-                  hintText: 'Describe the incident...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  labelStyle: const TextStyle(color: Colors.blue),
-                ),
-              ),
-              const SizedBox(height: 32),
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _showSuccessDialog,
-                  child: const Text(
-                    'Submit Report',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
+              Expanded(
+                child: PageView(
+                  controller: _controller,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _step1(provider),
+                    _step2(provider),
+                    _step3(provider),
+                  ],
                 ),
               ),
             ],
           ),
+          if (_isLoading)
+            Container(
+              color: Colors.black45,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
+      ),
+
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _nextPage,
+          child: Text(_currentPage == 2 ? "Submit Report" : "Next"),
+        ),
+      ),
+    );
+  }
+
+  Widget _step1(ReportProvider provider) {
+    return _cardWrapper(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Report Details",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _titleController,
+            decoration: _inputStyle("Title"),
+          ),
+          const SizedBox(height: 16),
+          DropDownTextField(
+            clearOption: true,
+            textFieldDecoration: _inputStyle("Category"),
+            dropDownList: _categories,
+            onChanged: (val) {
+              if (val is DropDownValueModel) {
+                _selectedCategory = val.value;
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            decoration: _inputStyle("Description"),
+            maxLines: 3,
+            onChanged: provider.setDescription,
+          ),
+          const SizedBox(height: 16),
+          CheckboxListTile(
+            title: const Text("Submit anonymously"),
+            value: provider.isAnonymous,
+            onChanged: (value) => provider.setAnonymous(value ?? false),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _step2(ReportProvider provider) {
+    return _cardWrapper(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          //_backButton(),
+          const Text(
+            "Location",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _addressController,
+            decoration: _inputStyle("Address"),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 250,
+            child: GoogleMap(
+              initialCameraPosition: const CameraPosition(
+                target: LatLng(20.52353, -100.8157),
+                zoom: 14,
+              ),
+              onTap: provider.setLocation,
+              markers:
+                  provider.selectedLocation != null
+                      ? {
+                        Marker(
+                          markerId: const MarkerId("selected"),
+                          position: provider.selectedLocation!,
+                        ),
+                      }
+                      : {},
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _step3(ReportProvider provider) {
+    return _cardWrapper(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          //_backButton(),
+          const Text(
+            "Photo",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          if (provider.selectedImage != null)
+            Image.file(provider.selectedImage!, height: 150),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton.icon(
+                icon: const Icon(Icons.photo_library),
+                label: const Text("Gallery"),
+                onPressed: () async {
+                  final picked = await ImagePicker().pickImage(
+                    source: ImageSource.gallery,
+                  );
+                  if (picked != null) provider.setImage(File(picked.path));
+                },
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.camera_alt),
+                label: const Text("Camera"),
+                onPressed: () async {
+                  final picked = await ImagePicker().pickImage(
+                    source: ImageSource.camera,
+                  );
+                  if (picked != null) provider.setImage(File(picked.path));
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _backButton() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: () {
+          _controller.previousPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        },
+        icon: const Icon(Icons.arrow_back),
+        label: const Text("Back"),
+      ),
+    );
+  }
+
+  Widget _cardWrapper(Widget child) {
+    return Center(
+      child: Card(
+        elevation: 4,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(child: child),
         ),
       ),
     );

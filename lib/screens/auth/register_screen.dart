@@ -37,7 +37,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       confirmPassword: _confirmPasswordController.text,
     );
     if (provider.successMessage != null && mounted) {
-      // Espera un momento para mostrar el mensaje y luego redirige al login
       await Future.delayed(const Duration(seconds: 2));
       Navigator.pushReplacementNamed(context, '/');
     }
@@ -62,14 +61,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 16, bottom: 32),
                   child: Image.asset('assets/logo.png', height: 80),
                 ),
               ),
-              // Title
               Text(
                 'Register Account',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -96,7 +93,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(color: Colors.grey[600]),
               ),
               const SizedBox(height: 32),
-              // First Name
               TextField(
                 controller: _firstNameController,
                 decoration: InputDecoration(
@@ -108,7 +104,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Last Name
               TextField(
                 controller: _lastNameController,
                 decoration: InputDecoration(
@@ -120,7 +115,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Email
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -133,7 +127,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
-              // Password
               TextField(
                 controller: _passwordController,
                 obscureText: registerProvider.obscurePassword,
@@ -156,7 +149,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Confirm Password
               TextField(
                 controller: _confirmPasswordController,
                 obscureText: registerProvider.obscureConfirmPassword,
@@ -219,7 +211,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Or continue with
               Row(
                 children: [
                   Expanded(child: Divider()),
@@ -248,7 +239,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              // Login link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

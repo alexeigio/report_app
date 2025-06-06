@@ -84,7 +84,7 @@ class LoginScreen extends StatelessWidget {
         });
       }
     } catch (e) {
-      // Puedes manejar errores aquí si lo deseas
+      // Errors
     }
   }
 
@@ -99,7 +99,6 @@ class LoginScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 16, bottom: 32),
@@ -109,7 +108,6 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              // Welcome Text
               Text(
                 'Welcome Back 👋',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -136,7 +134,6 @@ class LoginScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.grey[600]),
               ),
               const SizedBox(height: 32),
-              // Email Field
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -149,7 +146,6 @@ class LoginScreen extends StatelessWidget {
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
-              // Password Field
               TextField(
                 controller: _passwordController,
                 obscureText: loginProvider.obscurePassword,
@@ -172,7 +168,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              // Error message
               if (loginProvider.errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -181,7 +176,6 @@ class LoginScreen extends StatelessWidget {
                     style: TextStyle(color: Colors.red),
                   ),
                 ),
-              // Forgot Password
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -200,7 +194,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              // Login Button
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -225,7 +218,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              // Or continue with
               Row(
                 children: [
                   Expanded(child: Divider()),
@@ -254,7 +246,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              // Register
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

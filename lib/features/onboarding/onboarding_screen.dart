@@ -40,7 +40,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    // Precargar las imágenes una vez renderizado el primer frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       for (final page in _pages) {
         precacheImage(AssetImage(page.imageAsset), context);
@@ -70,7 +69,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           final page = _pages[index];
           return Stack(
             children: [
-              // Imagen ocupa 65% del alto
               Positioned.fill(
                 child: Column(
                   children: [
@@ -114,7 +112,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Indicadores
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: List.generate(

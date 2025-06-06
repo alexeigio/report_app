@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordProvider extends ChangeNotifier {
   bool _loading = false;
-  String? _message; // Puede ser éxito o error
+  String? _message; 
   bool _success = false;
 
   bool get loading => _loading;

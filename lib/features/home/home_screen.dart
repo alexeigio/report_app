@@ -4,6 +4,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_slider_drawer/flutter_slider_drawer.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:report_app/screens/auth/login_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -76,7 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
           body: ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
-              // ✅ Logo centrado
               Center(child: Image.asset('assets/logo.png', height: 60)),
               const SizedBox(height: 24),
 
@@ -156,24 +158,126 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
 
-              Column(
-                children:
-                    reports.map((report) {
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: const Icon(
-                            Icons.report,
-                            color: Colors.indigo,
-                          ),
-                          title: Text(report["title"] ?? ""),
-                          subtitle: Text(report["description"] ?? ""),
-                        ),
-                      );
-                    }).toList(),
+              StreamBuilder<QuerySnapshot>(
+                stream:
+                    FirebaseFirestore.instance
+                        .collection('reports')
+                        .orderBy('createdAt', descending: true)
+                        .limit(5)
+                        .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final reports = snapshot.data!.docs;
+
+                  return Column(
+                    children:
+                        reports.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final title =
+                              data['title']?.toString() ?? 'Sin título';
+                          final description =
+                              data['description']?.toString() ??
+                              'Sin descripción';
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: ListTile(
+                              title: Text(title),
+                              subtitle: Text(description),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.info_outline),
+                                onPressed:
+                                    () => showDialog(
+                                      context: context,
+                                      builder:
+                                          (_) => ReportDetailModal(report: doc),
+                                    ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  );
+                },
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class ReportDetailModal extends StatelessWidget {
+  final QueryDocumentSnapshot report;
+
+  const ReportDetailModal({required this.report, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final data = report.data() as Map<String, dynamic>;
+    final timestamp =
+        (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final lat = data['location']?['lat'] ?? 0.0;
+    final lng = data['location']?['lng'] ?? 0.0;
+
+    return Dialog(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (data['image_url'] != null)
+              Image.network(
+                data['image_url'],
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
+              ),
+            const SizedBox(height: 12),
+            Text(
+              data['title'] ?? 'Sin título',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text("Categoría: ${data['category'] ?? 'N/A'}"),
+            Text("Estado: ${data['status'] ?? 'N/A'}"),
+            Text("Descripción: ${data['description'] ?? 'N/A'}"),
+            Text("Fecha: ${DateFormat('dd/MM/yyyy HH:mm').format(timestamp)}"),
+            const SizedBox(height: 16),
+            const Text(
+              "Ubicación:",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 200,
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(lat, lng),
+                  zoom: 15,
+                ),
+                markers: {
+                  Marker(
+                    markerId: const MarkerId("report_location"),
+                    position: LatLng(lat, lng),
+                  ),
+                },
+                zoomControlsEnabled: false,
+                liteModeEnabled: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cerrar"),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -191,17 +295,10 @@ class _CustomDrawer extends StatelessWidget {
       children: [
         const SizedBox(height: 40),
 
-        // Logo centrado
-        Center(
-          child: Image.asset(
-            'assets/logo.png', // asegúrate de que este sea tu logo
-            height: 60,
-          ),
-        ),
+        Center(child: Image.asset('assets/logo.png', height: 60)),
 
         const SizedBox(height: 20),
 
-        // Foto del usuario logueado
         CircleAvatar(
           radius: 40,
           backgroundImage:
@@ -213,7 +310,6 @@ class _CustomDrawer extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // Texto de bienvenida
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Text(
@@ -228,33 +324,41 @@ class _CustomDrawer extends StatelessWidget {
         _drawerItem(context, Icons.notifications, "Notifications", () {}),
         _drawerItem(context, Icons.settings, "Settings", () {}),
         _drawerItem(context, Icons.location_on, "In-Person Help", () {}),
-        _drawerItem(context, Icons.logout, "Logout", () async {
-          final confirm = await showDialog<bool>(
+        _drawerItem(context, Icons.logout, "Logout", () {
+          showDialog(
             context: context,
-            builder:
-                (context) => AlertDialog(
-                  title: const Text('Confirm Logout'),
-                  content: const Text('Are you sure you want to log out?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Logout'),
-                    ),
-                  ],
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Cerrar sesión'),
+                content: const Text(
+                  '¿Estás seguro de que deseas cerrar sesión?',
                 ),
-          );
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancelar'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
 
-          if (confirm == true) {
-            await FirebaseAuth.instance.signOut();
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => LoginScreen()),
-              (route) => false,
-            );
-          }
+                      Navigator.of(context).pop();
+
+                      await FirebaseAuth.instance.signOut();
+
+                      Future.microtask(() {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => LoginScreen()),
+                          (route) => false,
+                        );
+                      });
+                    },
+                    child: const Text('Log Out'),
+                  ),
+                ],
+              );
+            },
+          );
         }),
       ],
     );

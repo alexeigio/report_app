@@ -7,7 +7,9 @@ import 'package:report_app/features/home/home_screen.dart';
 import 'package:report_app/features/user/profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  final int initialIndex;
+
+  const DashboardScreen({Key? key, this.initialIndex = 0}) : super(key: key);
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -19,14 +21,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = PersistentTabController(initialIndex: 0);
+    _controller = PersistentTabController(initialIndex: widget.initialIndex);
   }
 
   List<Widget> _buildScreens() {
-    return const [
+    return [
       HomeScreen(),
       AllReportsScreen(),
-      ReportIncidentScreen(), // Central screen (index 2)
+      ReportIncidentScreen(
+        onReportSubmitted: (index) {
+          _controller.jumpToTab(index);
+        },
+      ),
       MyReportsScreen(),
       ProfileScreen(),
     ];
