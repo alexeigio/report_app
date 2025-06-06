@@ -16,8 +16,15 @@ class ProfileProvider extends ChangeNotifier {
   TextEditingController? nameController;
   TextEditingController? emailController;
 
-  ProfileProvider() {
-    isGoogleUser = user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
+  /* ProfileProvider() {
+    isGoogleUser =
+        user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
+  } */
+  ProfileProvider();
+
+  void initControllers({required String name, required String email}) {
+    nameController ??= TextEditingController(text: name);
+    emailController ??= TextEditingController(text: email);
   }
 
   void setEditing(bool value) {
@@ -71,9 +78,9 @@ class ProfileProvider extends ChangeNotifier {
           .collection('users')
           .doc(user!.uid)
           .update({
-        'name': nameController!.text.trim(),
-        'email': emailController!.text.trim(),
-      });
+            'name': nameController!.text.trim(),
+            'email': emailController!.text.trim(),
+          });
       await user!.updateDisplayName(nameController!.text.trim());
       await user!.updateEmail(emailController!.text.trim());
       setEditing(false);
@@ -82,6 +89,26 @@ class ProfileProvider extends ChangeNotifier {
       setMessage('Error al actualizar perfil');
     }
     setLoading(false);
+  }
+
+  void reset() {
+    user = null;
+    isGoogleUser = false;
+    nameController?.dispose();
+    emailController?.dispose();
+    nameController = null;
+    emailController = null;
+    editing = false;
+    message = null;
+    success = false;
+    notifyListeners();
+  }
+
+  void loadUser() {
+    user = FirebaseAuth.instance.currentUser;
+    isGoogleUser =
+        user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
+    notifyListeners();
   }
 
   void resetControllers(Map<String, dynamic> data) {

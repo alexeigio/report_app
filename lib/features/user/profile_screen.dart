@@ -3,64 +3,35 @@ import 'package:provider/provider.dart';
 import 'package:report_app/providers/profile_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:report_app/screens/auth/login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   static const String defaultImageUrl =
       "https://st3.depositphotos.com/15648834/17930/v/450/depositphotos_179308454-stock-illustration-unknown-person-silhouette-glasses-profile.jpg";
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
-
     final user = profileProvider.user;
+
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('My Profile')),
-        body: const Center(child: Text('No user logged in')),
+        appBar: AppBar(title: const Text('Mi Perfil')),
+        body: const Center(child: Text('No hay usuario autenticado')),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi Perfil'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('Cerrar sesión'),
-                    content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancelar'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await FirebaseAuth.instance.signOut();
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (_) => LoginScreen(),
-                            ),
-                            (route) => false,
-                          );
-                        },
-                        child: const Text('Cerrar sesión'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
-        ],
       ),
       body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         future: profileProvider.getUserDoc(),
@@ -68,16 +39,17 @@ class ProfileScreen extends StatelessWidget {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
+
           final data = snapshot.data!.data();
           if (data == null) {
-            return const Center(child: Text('No user data found'));
+            return const Center(
+              child: Text('No se encontraron datos del usuario'),
+            );
           }
 
-          profileProvider.nameController ??= TextEditingController(
-            text: data['name'] ?? user.displayName ?? "",
-          );
-          profileProvider.emailController ??= TextEditingController(
-            text: data['email'] ?? user.email ?? "",
+          profileProvider.initControllers(
+            name: data['name'] ?? user.displayName ?? '',
+            email: data['email'] ?? user.email ?? '',
           );
 
           return SingleChildScrollView(
@@ -91,7 +63,7 @@ class ProfileScreen extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Form(
-                    key: GlobalKey<FormState>(),
+                    key: _formKey,
                     child: Column(
                       children: [
                         Stack(
@@ -101,13 +73,18 @@ class ProfileScreen extends StatelessWidget {
                               radius: 50,
                               backgroundImage: NetworkImage(
                                 profileProvider.isGoogleUser
-                                    ? (user.photoURL ?? defaultImageUrl)
-                                    : (data['photoUrl'] ?? defaultImageUrl),
+                                    ? (user.photoURL ??
+                                        ProfileScreen.defaultImageUrl)
+                                    : (data['photoUrl'] ??
+                                        ProfileScreen.defaultImageUrl),
                               ),
-                              child: ((profileProvider.isGoogleUser && user.photoURL == null) ||
-                                      (!profileProvider.isGoogleUser && data['photoUrl'] == null))
-                                  ? const Icon(Icons.person, size: 50)
-                                  : null,
+                              child:
+                                  ((profileProvider.isGoogleUser &&
+                                              user.photoURL == null) ||
+                                          (!profileProvider.isGoogleUser &&
+                                              data['photoUrl'] == null))
+                                      ? const Icon(Icons.person, size: 50)
+                                      : null,
                             ),
                             if (!profileProvider.isGoogleUser)
                               IconButton(
@@ -115,57 +92,91 @@ class ProfileScreen extends StatelessWidget {
                                   Icons.edit,
                                   color: Colors.blue,
                                 ),
-                                onPressed: profileProvider.loading
-                                    ? null
-                                    : () {
-                                        showModalBottomSheet(
-                                          context: context,
-                                          builder: (context) => SafeArea(
-                                            child: Wrap(
-                                              children: [
-                                                ListTile(
-                                                  leading: const Icon(Icons.camera_alt),
-                                                  title: const Text('Tomar foto'),
-                                                  onTap: () {
-                                                    Navigator.pop(context);
-                                                    profileProvider.pickAndUploadImage(fromCamera: true);
-                                                  },
+                                onPressed:
+                                    profileProvider.loading
+                                        ? null
+                                        : () {
+                                          showModalBottomSheet(
+                                            context: context,
+                                            builder:
+                                                (_) => SafeArea(
+                                                  child: Wrap(
+                                                    children: [
+                                                      ListTile(
+                                                        leading: const Icon(
+                                                          Icons.camera_alt,
+                                                        ),
+                                                        title: const Text(
+                                                          'Tomar foto',
+                                                        ),
+                                                        onTap: () {
+                                                          Navigator.pop(
+                                                            context,
+                                                          );
+                                                          profileProvider
+                                                              .pickAndUploadImage(
+                                                                fromCamera:
+                                                                    true,
+                                                              );
+                                                        },
+                                                      ),
+                                                      ListTile(
+                                                        leading: const Icon(
+                                                          Icons.photo_library,
+                                                        ),
+                                                        title: const Text(
+                                                          'Elegir de galería',
+                                                        ),
+                                                        onTap: () {
+                                                          Navigator.pop(
+                                                            context,
+                                                          );
+                                                          profileProvider
+                                                              .pickAndUploadImage(
+                                                                fromCamera:
+                                                                    false,
+                                                              );
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                                ListTile(
-                                                  leading: const Icon(Icons.photo_library),
-                                                  title: const Text('Elegir de galería'),
-                                                  onTap: () {
-                                                    Navigator.pop(context);
-                                                    profileProvider.pickAndUploadImage(fromCamera: false);
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
+                                          );
+                                        },
                               ),
                           ],
                         ),
                         const SizedBox(height: 20),
                         TextFormField(
                           controller: profileProvider.nameController,
-                          enabled: !profileProvider.isGoogleUser && profileProvider.editing,
+                          enabled:
+                              !profileProvider.isGoogleUser &&
+                              profileProvider.editing,
                           decoration: const InputDecoration(
                             labelText: 'Nombre',
                             border: OutlineInputBorder(),
                           ),
-                          validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
+                          validator:
+                              (v) =>
+                                  v == null || v.isEmpty
+                                      ? 'Campo requerido'
+                                      : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: profileProvider.emailController,
-                          enabled: !profileProvider.isGoogleUser && profileProvider.editing,
+                          enabled:
+                              !profileProvider.isGoogleUser &&
+                              profileProvider.editing,
                           decoration: const InputDecoration(
                             labelText: 'Correo',
                             border: OutlineInputBorder(),
                           ),
-                          validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
+                          validator:
+                              (v) =>
+                                  v == null || v.isEmpty
+                                      ? 'Campo requerido'
+                                      : null,
                         ),
                         const SizedBox(height: 24),
                         if (profileProvider.message != null)
@@ -174,47 +185,63 @@ class ProfileScreen extends StatelessWidget {
                             child: Text(
                               profileProvider.message!,
                               style: TextStyle(
-                                color: profileProvider.success ? Colors.green : Colors.red,
+                                color:
+                                    profileProvider.success
+                                        ? Colors.green
+                                        : Colors.red,
                               ),
                             ),
                           ),
                         if (!profileProvider.isGoogleUser)
                           profileProvider.editing
                               ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    ElevatedButton(
-                                      onPressed: profileProvider.loading
-                                          ? null
-                                          : () => profileProvider.saveProfile(),
-                                      child: profileProvider.loading
-                                          ? const SizedBox(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed:
+                                        profileProvider.loading
+                                            ? null
+                                            : () {
+                                              if (_formKey.currentState!
+                                                  .validate()) {
+                                                profileProvider.saveProfile();
+                                              }
+                                            },
+                                    child:
+                                        profileProvider.loading
+                                            ? const SizedBox(
                                               width: 18,
                                               height: 18,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
                                             )
-                                          : const Text('Guardar'),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    OutlinedButton(
-                                      onPressed: profileProvider.loading
-                                          ? null
-                                          : () {
+                                            : const Text('Guardar'),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  OutlinedButton(
+                                    onPressed:
+                                        profileProvider.loading
+                                            ? null
+                                            : () {
                                               profileProvider.setEditing(false);
-                                              profileProvider.resetControllers(data);
+                                              profileProvider.resetControllers(
+                                                data,
+                                              );
                                             },
-                                      child: const Text('Cancelar'),
-                                    ),
-                                  ],
-                                )
+                                    child: const Text('Cancelar'),
+                                  ),
+                                ],
+                              )
                               : ElevatedButton(
-                                  onPressed: profileProvider.loading
-                                      ? null
-                                      : () {
+                                onPressed:
+                                    profileProvider.loading
+                                        ? null
+                                        : () {
                                           profileProvider.setEditing(true);
                                         },
-                                  child: const Text('Editar'),
-                                ),
+                                child: const Text('Editar'),
+                              ),
                       ],
                     ),
                   ),

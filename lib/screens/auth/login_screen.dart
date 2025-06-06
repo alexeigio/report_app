@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'forgot_password_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/login_provider.dart';
+import 'package:report_app/providers/profile_provider.dart';
 
 class LoginScreen extends StatelessWidget {
   LoginScreen({Key? key}) : super(key: key);
@@ -19,21 +20,25 @@ class LoginScreen extends StatelessWidget {
     loginProvider.setError(null);
     loginProvider.setLoading(true);
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       User? user = userCredential.user;
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
-        loginProvider.setError('Debes verificar tu correo electrónico. Se ha reenviado el correo de verificación.');
+        loginProvider.setError(
+          'Debes verificar tu correo electrónico. Se ha reenviado el correo de verificación.',
+        );
         await FirebaseAuth.instance.signOut();
         loginProvider.setLoading(false);
         return;
       }
 
       loginProvider.setLoading(false);
+      Provider.of<ProfileProvider>(context, listen: false).loadUser();
       Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
       loginProvider.setError(e.message ?? 'Error al iniciar sesión');
@@ -51,14 +56,17 @@ class LoginScreen extends StatelessWidget {
         loginProvider.setLoading(false);
         return;
       }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
       await saveUserToFirestore(userCredential.user!, provider: "google");
       loginProvider.setLoading(false);
+      Provider.of<ProfileProvider>(context, listen: false).loadUser();
       Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
       loginProvider.setError(e.message ?? 'Error al iniciar sesión con Google');
@@ -71,7 +79,9 @@ class LoginScreen extends StatelessWidget {
     required String provider,
   }) async {
     try {
-      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
       final userDoc = await userRef.get();
       if (!userDoc.exists) {
         await userRef.set({
@@ -102,10 +112,7 @@ class LoginScreen extends StatelessWidget {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 16, bottom: 32),
-                  child: Image.asset(
-                    'assets/logo.png',
-                    height: 80,
-                  ),
+                  child: Image.asset('assets/logo.png', height: 80),
                 ),
               ),
               Text(
@@ -204,17 +211,19 @@ class LoginScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: loginProvider.isLoading
-                      ? null
-                      : () => _login(context),
-                  child: loginProvider.isLoading
-                      ? const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
-                      : Text(
-                          'Login',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
+                  onPressed:
+                      loginProvider.isLoading ? null : () => _login(context),
+                  child:
+                      loginProvider.isLoading
+                          ? const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          )
+                          : Text(
+                            'Login',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -236,9 +245,10 @@ class LoginScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 48,
                 child: InkWell(
-                  onTap: loginProvider.isLoading
-                      ? null
-                      : () => _signInWithGoogle(context),
+                  onTap:
+                      loginProvider.isLoading
+                          ? null
+                          : () => _signInWithGoogle(context),
                   child: SvgPicture.asset(
                     'assets/google_logo_ctn.svg',
                     fit: BoxFit.contain,
