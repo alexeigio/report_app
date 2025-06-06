@@ -3,6 +3,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_slider_drawer/flutter_slider_drawer.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:report_app/features/reports/in_person_help.dart';
 import 'package:report_app/features/settings/settings_screen.dart';
 import 'package:report_app/screens/auth/login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -369,7 +370,11 @@ class _CustomDrawer extends StatelessWidget {
                 context,
               ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
             }),
-            _drawerItem(context, Icons.location_on, "In-Person Help", () {}),
+            _drawerItem(context, Icons.location_on, "In-Person Help", () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => InPersonHelpScreen()));
+            }),
             _drawerItem(context, Icons.logout, "Logout", () {
               showDialog(
                 context: context,
