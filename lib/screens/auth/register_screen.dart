@@ -328,7 +328,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: InkWell(
                   onTap: _registerWithGoogle,
                   child: SvgPicture.asset(
-                    'assets/google_logo_SU.svg', // El botón oficial completo en SVG
+                    'assets/google_logo_SU.svg', 
                     fit: BoxFit.contain,
                   ),
                 ),
