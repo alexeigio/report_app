@@ -251,7 +251,7 @@ class _CustomDrawer extends StatelessWidget {
           if (confirm == true) {
             await FirebaseAuth.instance.signOut();
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              MaterialPageRoute(builder: (_) => LoginScreen()),
               (route) => false,
             );
           }
