@@ -5,20 +5,19 @@ import 'register_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'forgot_password_screen.dart';
+import 'package:provider/provider.dart';
+import '../../providers/login_provider.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+class LoginScreen extends StatelessWidget {
+  LoginScreen({Key? key}) : super(key: key);
 
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  bool _obscurePassword = true;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  Future<void> _login() async {
+  Future<void> _login(BuildContext context) async {
+    final loginProvider = Provider.of<LoginProvider>(context, listen: false);
+    loginProvider.setError(null);
+    loginProvider.setLoading(true);
     try {
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -28,57 +27,42 @@ class _LoginScreenState extends State<LoginScreen> {
       User? user = userCredential.user;
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Debes verificar tu correo electrónico. Se ha reenviado el correo de verificación.'),
-            action: SnackBarAction(
-              label: 'Reenviar',
-              onPressed: () async {
-                await user.sendEmailVerification();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Correo de verificación reenviado.')),
-                );
-              },
-            ),
-          ),
-        );
+        loginProvider.setError('Debes verificar tu correo electrónico. Se ha reenviado el correo de verificación.');
         await FirebaseAuth.instance.signOut();
+        loginProvider.setLoading(false);
         return;
       }
 
+      loginProvider.setLoading(false);
       Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Error al iniciar sesión')),
-      );
+      loginProvider.setError(e.message ?? 'Error al iniciar sesión');
+      loginProvider.setLoading(false);
     }
   }
 
-  Future<void> _signInWithGoogle() async {
+  Future<void> _signInWithGoogle(BuildContext context) async {
+    final loginProvider = Provider.of<LoginProvider>(context, listen: false);
+    loginProvider.setError(null);
+    loginProvider.setLoading(true);
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
-        // El usuario canceló el inicio de sesión
+        loginProvider.setLoading(false);
         return;
       }
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithCredential(credential);
-      // Guardar usuario en Firestore
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       await saveUserToFirestore(userCredential.user!, provider: "google");
-      // Usuario logueado, navega a la siguiente pantalla
+      loginProvider.setLoading(false);
       Navigator.pushNamed(context, '/dashboard');
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? 'Error al iniciar sesión con Google'),
-        ),
-      );
+      loginProvider.setError(e.message ?? 'Error al iniciar sesión con Google');
+      loginProvider.setLoading(false);
     }
   }
 
@@ -87,10 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required String provider,
   }) async {
     try {
-      print("Intentando guardar usuario con UID: ${user.uid}");
-      final userRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid);
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       final userDoc = await userRef.get();
       if (!userDoc.exists) {
         await userRef.set({
@@ -101,17 +82,16 @@ class _LoginScreenState extends State<LoginScreen> {
           'provider': provider,
           'createdAt': FieldValue.serverTimestamp(),
         });
-        print("Usuario guardado correctamente.");
-      } else {
-        print("Usuario ya existía en Firestore.");
       }
     } catch (e) {
-      print('Error al guardar usuario en Firestore: $e');
+      // Puedes manejar errores aquí si lo deseas
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final loginProvider = Provider.of<LoginProvider>(context);
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -124,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 16, bottom: 32),
                   child: Image.asset(
-                    'assets/logo.png', // Cambia por la ruta de tu logo
+                    'assets/logo.png',
                     height: 80,
                   ),
                 ),
@@ -172,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Password Field
               TextField(
                 controller: _passwordController,
-                obscureText: _obscurePassword,
+                obscureText: loginProvider.obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder(
@@ -181,19 +161,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   prefixIcon: Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword
+                      loginProvider.obscurePassword
                           ? Icons.visibility_off
                           : Icons.visibility,
                     ),
                     onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
+                      loginProvider.toggleObscurePassword();
                     },
                   ),
                 ),
               ),
               const SizedBox(height: 8),
+              // Error message
+              if (loginProvider.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    loginProvider.errorMessage!,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
               // Forgot Password
               Align(
                 alignment: Alignment.centerRight,
@@ -224,11 +211,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: _login,
-                  child: Text(
-                    'Login',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
+                  onPressed: loginProvider.isLoading
+                      ? null
+                      : () => _login(context),
+                  child: loginProvider.isLoading
+                      ? const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : Text(
+                          'Login',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -247,21 +240,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: InkWell(
-                  onTap: _signInWithGoogle,
+                  onTap: loginProvider.isLoading
+                      ? null
+                      : () => _signInWithGoogle(context),
                   child: SvgPicture.asset(
-                    'assets/google_logo_ctn.svg', // El botón oficial completo en SVG
+                    'assets/google_logo_ctn.svg',
                     fit: BoxFit.contain,
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
-
               // Register
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

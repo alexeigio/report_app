@@ -1,19 +1,34 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:report_app/features/dashboard/dashboard_screen.dart';
 import 'package:report_app/firebase_options.dart';
+import 'package:report_app/providers/login_provider.dart';
+import 'package:report_app/providers/register_provider.dart';
+import 'package:report_app/providers/forgot_password_provider.dart';
+import 'package:report_app/providers/profile_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
-import 'features/reports/report_incident_screen.dart'; // <-- Agrega esta línea
+import 'features/reports/report_incident_screen.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LoginProvider()),
+        ChangeNotifierProvider(create: (_) => RegisterProvider()),
+        ChangeNotifierProvider(create: (_) => ForgotPasswordProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()), 
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -29,12 +44,12 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/onboarding',
       routes: {
-        '/': (context) => const LoginScreen(),
+        '/': (context) => LoginScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/home': (context) => const HomeScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/report': (context) => const ReportIncidentScreen(), // <-- Agrega esta línea
+        '/report': (context) => const ReportIncidentScreen(), 
       },
     );
   }

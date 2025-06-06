@@ -55,7 +55,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      fadeTransitionTo(context, const LoginScreen());
+      fadeTransitionTo(context, LoginScreen());
     }
   }
 

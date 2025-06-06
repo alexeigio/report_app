@@ -1,38 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../../providers/forgot_password_provider.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({Key? key}) : super(key: key);
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
-}
-
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  bool _loading = false;
-
-  Future<void> _sendResetEmail() async {
-    setState(() => _loading = true);
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: _emailController.text.trim(),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Correo de recuperación enviado.')),
-      );
-      Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Error al enviar correo')),
-      );
-    } finally {
-      setState(() => _loading = false);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final TextEditingController _emailController = TextEditingController();
+    final forgotProvider = Provider.of<ForgotPasswordProvider>(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Recuperar contraseña')),
       body: Padding(
@@ -54,11 +31,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 24),
+            if (forgotProvider.message != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  forgotProvider.message!,
+                  style: TextStyle(
+                    color: forgotProvider.success ? Colors.green : Colors.red,
+                  ),
+                ),
+              ),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _loading ? null : _sendResetEmail,
-                child: _loading
+                onPressed: forgotProvider.loading
+                    ? null
+                    : () async {
+                        await forgotProvider.sendResetEmail(_emailController.text);
+                        if (forgotProvider.success) {
+                          Future.delayed(const Duration(seconds: 1), () {
+                            Navigator.pop(context);
+                          });
+                        }
+                      },
+                child: forgotProvider.loading
                     ? const CircularProgressIndicator()
                     : const Text('Enviar enlace'),
               ),
