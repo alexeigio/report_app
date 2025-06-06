@@ -3,6 +3,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_slider_drawer/flutter_slider_drawer.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:report_app/features/settings/settings_screen.dart';
 import 'package:report_app/screens/auth/login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -64,53 +65,68 @@ class _HomeScreenState extends State<HomeScreen> {
         key: _sliderDrawerKey,
         appBar: SliderAppBar(
           config: SliderAppBarConfig(
-            title: const Text(
+            title: Text(
               'Home',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
-            backgroundColor: Colors.white,
-            drawerIconColor: Colors.black,
+            backgroundColor: Theme.of(context).colorScheme.surface, // <-- Cambia aquí
+            drawerIconColor: Theme.of(context).colorScheme.primary, // <-- Cambia aquí
           ),
         ),
         slider: const _CustomDrawer(),
         child: Scaffold(
-          backgroundColor: ThemeData().canvasColor,
+          backgroundColor: Theme.of(context).colorScheme.background, // <-- Cambia aquí
           body: ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
-              Center(child: Image.asset('assets/logo.png', height: 60)),
+              // ✅ Logo centrado
+              Center(
+                child: Image.asset(
+                  'assets/logo.png',
+                  height: 60,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : null, // Logo blanco en dark mode si tienes versión monocromática
+                ),
+              ),
               const SizedBox(height: 24),
-
-              const Text(
+              Text(
                 "Safety Tips",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
 
+              // Safety Tips (CarouselSlider)
               CarouselSlider(
                 options: CarouselOptions(
                   height: 100,
                   autoPlay: true,
                   enlargeCenterPage: true,
                 ),
-                items:
-                    tips.map((tip) {
-                      return Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
+                items: tips.map((tip) {
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white, width: 2), // Borde blanco
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          tip,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(tip, textAlign: TextAlign.center),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
 
               const SizedBox(height: 16),
@@ -120,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
 
+              // Categories
               SizedBox(
                 height: 90,
                 child: ListView.builder(
@@ -131,18 +148,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       margin: const EdgeInsets.only(right: 16),
                       child: Column(
                         children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: Colors.white,
-                            child: SvgPicture.asset(
-                              category['icon'] ?? '',
-                              width: 30,
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2), // Borde blanco
+                            ),
+                            child: CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Theme.of(context).colorScheme.surface,
+                              child: SvgPicture.asset(
+                                category['icon'] ?? '',
+                                width: 30,
+                                colorFilter: ColorFilter.mode(
+                                  Theme.of(context).colorScheme.primary,
+                                  BlendMode.srcIn,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             category['name'] ?? '',
-                            style: const TextStyle(fontSize: 12),
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
@@ -158,49 +185,32 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
 
-              StreamBuilder<QuerySnapshot>(
-                stream:
-                    FirebaseFirestore.instance
-                        .collection('reports')
-                        .orderBy('createdAt', descending: true)
-                        .limit(5)
-                        .snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final reports = snapshot.data!.docs;
-
-                  return Column(
-                    children:
-                        reports.map((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          final title =
-                              data['title']?.toString() ?? 'Sin título';
-                          final description =
-                              data['description']?.toString() ??
-                              'Sin descripción';
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              title: Text(title),
-                              subtitle: Text(description),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.info_outline),
-                                onPressed:
-                                    () => showDialog(
-                                      context: context,
-                                      builder:
-                                          (_) => ReportDetailModal(report: doc),
-                                    ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+              // Recent Reports
+              Column(
+                children: reports.map((report) {
+                  return Card(
+                    color: Theme.of(context).colorScheme.surface,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Colors.white, width: 2), // Borde blanco
+                    ),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.report,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: Text(
+                        report["title"] ?? "",
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      subtitle: Text(
+                        report["description"] ?? "",
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
                   );
-                },
+                }).toList(),
               ),
             ],
           ),
@@ -370,9 +380,16 @@ class _CustomDrawer extends StatelessWidget {
     String label,
     VoidCallback onTap,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: Icon(icon, color: Colors.indigo),
-      title: Text(label),
+      leading: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: Text(
+        label,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
       onTap: onTap,
     );
   }
